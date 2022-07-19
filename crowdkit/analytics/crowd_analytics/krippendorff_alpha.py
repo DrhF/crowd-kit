@@ -3,7 +3,7 @@ import pandas as pd
 from nltk.metrics.agreement import AnnotationTask
 from nltk.metrics.distance import binary_distance
 
-from crowdkit.analytics.base import BaseCrowdMetricsCalculator, _check_answers
+from crowdkit.analytics.base import BaseCrowdMetricsCalculator, check_answers
 
 
 class KrippendorffAlphaCalculator(BaseCrowdMetricsCalculator):
@@ -61,6 +61,6 @@ class KrippendorffAlphaCalculator(BaseCrowdMetricsCalculator):
             Returns:
                 Float value.
         """
-        _check_answers(answers)
+        check_answers(answers)
         data: List[Tuple[Any, Hashable, Hashable]] = answers[['worker', 'task', 'label']].values.tolist()
         return AnnotationTask(data, self.distance_callable).alpha()

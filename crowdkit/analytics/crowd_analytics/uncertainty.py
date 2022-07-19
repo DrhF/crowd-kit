@@ -6,12 +6,10 @@ from scipy.stats import entropy
 
 from crowdkit.aggregation import MajorityVote
 from crowdkit.aggregation.base import BaseClassificationAggregator
-from crowdkit.analytics.base import _check_answers, BaseCrowdMetricsCalculator
+from crowdkit.analytics.base import ComputeBy, check_answers, BaseCrowdMetricsCalculator
 
 
-class ComputeBy(str, Enum):
-    TASK = 'task'
-    WORKER = 'worker'
+
 
 
 class UncertaintyCalculator(BaseCrowdMetricsCalculator):
@@ -21,16 +19,16 @@ class UncertaintyCalculator(BaseCrowdMetricsCalculator):
         $$H(L) = -\sum_{label_i \in L} p(label_i) \cdot \log(p(label_i))$$
         Args:
             aggregator (aggregation.base.BaseClassificationAggregator): aggregation method, default: MajorityVote
-            compute_by: what to compute uncertainty for. If 'task', compute uncertainty of answers per task.
+            by: what to compute uncertainty for. If 'task', compute uncertainty of answers per task.
                 If 'worker', compute uncertainty for each worker.
             aggregate: If true, return the mean uncertainty, otherwise return uncertainties for each task or worker.
     """
 
-    def __init__(self, compute_by: ComputeBy = 'task', aggregate: bool = True,
+    def __init__(self, by: ComputeBy = ComputeBy.TASK, aggregate: bool = True,
                  aggregator: Optional[BaseClassificationAggregator] = None):
-        self.compute_by = compute_by
         self.aggregate = aggregate
         self.aggregator = aggregator
+        self.by = by
 
     @staticmethod
     def __label_probability(row: pd.Series, label: Any, n_labels: int) -> float:
@@ -47,7 +45,7 @@ class UncertaintyCalculator(BaseCrowdMetricsCalculator):
             Returns:
                 Series if aggregate is True, float value otherwise.
         """
-        _check_answers(answers)
+        check_answers(answers)
         if self.aggregator is not None:
             self.aggregator.fit(answers)
             if hasattr(self.aggregator, 'skills_'):
@@ -69,7 +67,7 @@ class UncertaintyCalculator(BaseCrowdMetricsCalculator):
         for label in labels:
             answers[label] = answers.apply(lambda row: self.__label_probability(row, label, len(labels)), axis=1)
 
-        labels_proba = answers.groupby(self.compute_by).sum()
+        labels_proba = answers.groupby(self.by).sum()
         uncertainties = labels_proba.apply(lambda row: entropy(row[labels] / (sum(row[labels]) + 1e-6)), axis=1)
         if self.aggregate:
             return uncertainties.mean()

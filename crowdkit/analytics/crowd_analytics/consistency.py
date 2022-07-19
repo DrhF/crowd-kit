@@ -4,7 +4,7 @@ import pandas as pd
 
 from crowdkit.aggregation import MajorityVote
 from crowdkit.aggregation.base import BaseClassificationAggregator
-from crowdkit.analytics.base import _check_answers, BaseCrowdMetricsCalculator
+from crowdkit.analytics.base import ComputeBy, check_answers, BaseCrowdMetricsCalculator
 
 
 class ConsistencyCalculator(BaseCrowdMetricsCalculator):
@@ -20,9 +20,9 @@ class ConsistencyCalculator(BaseCrowdMetricsCalculator):
             Union[float, pd.Series]
     """
 
-    def __init__(self, aggregator: BaseClassificationAggregator = MajorityVote(), by_task: bool = False):
+    def __init__(self, aggregator: BaseClassificationAggregator = MajorityVote(), by: ComputeBy = ComputeBy.WORKER):
         self.aggregator = aggregator
-        self.by_task = by_task
+        self.by = by
 
     @staticmethod
     def __task_consistency(row: pd.Series) -> float:
@@ -44,7 +44,7 @@ class ConsistencyCalculator(BaseCrowdMetricsCalculator):
             Returns:
                 Series if by_task is True, float value otherwise.
         """
-        _check_answers(answers)
+        check_answers(answers)
         aggregated = self.aggregator.fit_predict(answers)
         if workers_skills is None:
             if hasattr(self.aggregator, 'skills_'):
@@ -68,7 +68,7 @@ class ConsistencyCalculator(BaseCrowdMetricsCalculator):
 
         consistencies = labels_proba.apply(self._task_consistency, axis=1)
 
-        if self.by_task:
+        if self.by == ComputeBy.WORKER:
             return consistencies
         else:
             return consistencies.mean()
